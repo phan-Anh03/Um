@@ -19,7 +19,7 @@ module.exports.languages = {
     },
     "en": {
         "cooldown": "You received today's rewards, please come back after: %1 hours %2 minutes %3 seconds.",
-        "rewarded": "You received %1 VND, to continue to receive, please try again after 12 hours"
+        "rewarded": "You received %1 VND Từ Admin, to continue to receive, please try again after 12 hours"
     }
 }
 
