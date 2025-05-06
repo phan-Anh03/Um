@@ -1,1 +1,38 @@
-{}
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+
+const cacheDir = path.join(__dirname, 'cache');
+if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+
+async function downloadSampleMusic(api, threadID) {
+  const mp3Url = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+  const filePath = path.join(cacheDir, `sample_${Date.now()}.mp3`);
+
+  try {
+    const response = await axios({
+      method: 'GET',
+      url: mp3Url,
+      responseType: 'stream'
+    });
+
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
+
+    writer.on('finish', () => {
+      api.sendMessage({
+        body: '✅ Đã tải nhạc mẫu!',
+        attachment: fs.createReadStream(filePath)
+      }, threadID, () => {
+        fs.unlinkSync(filePath); // Xóa sau khi gửi nếu muốn
+      });
+    });
+
+    writer.on('error', err => {
+      api.sendMessage(`❌ Lỗi ghi file: ${err.message}`, threadID);
+    });
+
+  } catch (e) {
+    api.sendMessage(`⚠️ Lỗi khi tải file: ${e.message}`, threadID);
+  }
+}
