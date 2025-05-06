@@ -127,3 +127,4 @@ function convertHMS(s) {
   return [h, m, sec].map(v => v < 10 ? "0" + v : v)
     .filter((v, i) => v !== "00" || i > 0)
     .join(":");
+}
