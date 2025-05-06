@@ -122,9 +122,7 @@ module.exports.run = async function({ api, event, args }) {
     }
 
     const message = {
-      body: `📝Kết Quả Tìm Kiếm:\n────────────────────\n${videos.map((v, i) =>
-        `|› ${i + 1}. ${v.title}\n|›👤 ${v.channelTitle}\n|›⏱️ ${formatDuration(v.duration)}\n────────────────────`
-      ).join('\n')}📌 Reply số để nghe (chỉ bạn chọn được)`,
+      body: `📝Kết Quả Tìm Kiếm:\n────────────────────\n${videos.map((v, i) => |› ${i+1}. ${v.title}\n|›👤 ${v.channelTitle}\n|›⏱️${formatDuration(v.duration)}\n────────────────────   ).join('\n')}📌 Reply số để nghe (chỉ bạn chọn được),`,
       attachment: null
     };
 
