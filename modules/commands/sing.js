@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const Youtube = require('youtube-search-api');
+const yts = require('yt-search');
 const moment = require('moment-timezone');
 const axios = require('axios');
 
@@ -16,7 +16,6 @@ module.exports.config = {
   cooldowns: 5,
   usePrefix: true,
   dependencies: {
-    "youtube-search-api": "",
     "moment-timezone": "",
     "axios": ""
   }
@@ -109,12 +108,12 @@ module.exports.run = async function({ api, event, args }) {
   }
 
   try {
-    const searchResults = await Youtube.GetListByKeyword(args.join(" "), false, 5);
-    const videos = (searchResults.items || []).filter(v => v.type === "video").map(v => ({
-      id: v.id,
-      title: v.title || `Bài hát không tên (ID: ${v.id})`,
-      duration: v.length || '00:00',
-      channelTitle: v.channelTitle || 'Nghệ sĩ không xác định'
+    const searchResults = await yts(args.join(" "));
+    const videos = searchResults.videos.slice(0, 5).map(v => ({
+      id: v.videoId,
+      title: v.title || `Bài hát không tên (ID: ${v.videoId})`,
+      duration: v.timestamp || '00:00',
+      channelTitle: v.author?.name || 'Nghệ sĩ không xác định'
     }));
 
     if (videos.length === 0) {
