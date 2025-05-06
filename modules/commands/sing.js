@@ -66,6 +66,7 @@ async function setupYtDlp() {
   }
 }
 
+// === CẬP NHẬT ===
 async function searchVideos(query, maxResults = 5) {
   const ytDlpPath = getYtDlpPath();
   if (!fs.existsSync(ytDlpPath)) {
@@ -82,17 +83,33 @@ async function searchVideos(query, maxResults = 5) {
 
     const child = spawn(ytDlpPath, args);
     let output = '';
+    let errorOutput = '';
 
-    child.stdout.on('data', (data) => { output += data.toString(); });
-    child.stderr.on('data', () => {});
-    child.on('error', reject);
+    child.stdout.on('data', (data) => {
+      output += data.toString();
+    });
 
-    child.on('close', () => {
+    child.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    child.on('error', (err) => reject(new Error('Lỗi khi chạy yt-dlp: ' + err.message)));
+
+    child.on('close', (code) => {
+      if (!output.trim()) {
+        return reject(new Error('❌ Không tìm thấy bài hát phù hợp.\n' + (errorOutput || '')));
+      }
+
       const lines = output.trim().split('\n').filter(Boolean);
       const videos = lines.map(line => {
         const [id, title, channelTitle, duration] = line.split('|');
         return { id, title, channelTitle, duration };
-      });
+      }).filter(v => v.id && v.title);
+
+      if (videos.length === 0) {
+        return reject(new Error('❌ Không tìm thấy bài hát phù hợp.'));
+      }
+
       resolve(videos);
     });
   });
@@ -165,7 +182,7 @@ module.exports.run = async function({ api, event, args }) {
     });
 
   } catch (e) {
-    api.sendMessage("⚠️ Có lỗi xảy ra khi tìm kiếm bài hát!", event.threadID, event.messageID);
+    api.sendMessage(`⚠️ Lỗi khi tìm kiếm: ${e.message}`, event.threadID, event.messageID);
   }
 };
 
