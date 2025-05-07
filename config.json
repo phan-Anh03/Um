@@ -14,10 +14,10 @@
     "eventDisabled": [],
     "autoClean": true,
     "ACCESSTOKEN": "",
-    "BOTNAME": "AnGeL",
-    "AMDIN_NAME": "Có lỗi báo mình fix qua link bên dưới:",
+    "BOTNAME": "Yuz",
+    "AMDIN_NAME": "Trâm Anh:",
     "FACEBOOK_ADMIN": "https://www.facebook.com/SpeedTunnel/",
-    "PREFIX": "/",
+    "PREFIX": ".",
     "ADMINBOT": [
         "61568443432899"
     ],
