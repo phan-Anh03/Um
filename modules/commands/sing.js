@@ -1,11 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const { exec, spawn } = require('child_process');
+const { spawn } = require('child_process');
+const Youtube = require('youtube-search-api');
 const moment = require('moment-timezone');
 const axios = require('axios');
 
 module.exports.config = {
-  name: "ytb",
+  name: "sing2",
   version: "2.8.6",
   hasPermission: 0,
   credits: "D-Jukie fix by TKDEV, optimized by Grok",
@@ -15,6 +16,7 @@ module.exports.config = {
   cooldowns: 5,
   usePrefix: true,
   dependencies: {
+    "youtube-search-api": "",
     "moment-timezone": "",
     "axios": ""
   }
@@ -29,7 +31,7 @@ function checkCacheDirPermissions() {
     fs.writeFileSync(testFile, 'test');
     fs.unlinkSync(testFile);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -39,19 +41,20 @@ function getYtDlpPath() {
 }
 
 function getPlatform() {
-  return process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'macos' : 'linux';
+  if (process.platform === 'win32') return 'win';
+  if (process.platform === 'darwin') return 'macos';
+  return 'linux';
 }
 
 function getDownloadUrl(platform) {
-  return `https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp${ platform === 'win' ? '.exe' : '' }`;
+  return `https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp${platform === 'win' ? '.exe' : ''}`;
 }
 
 async function setupYtDlp() {
   const ytDlpPath = getYtDlpPath();
   if (fs.existsSync(ytDlpPath)) return true;
   try {
-    const platform = getPlatform();
-    const url = getDownloadUrl(platform);
+    const url = getDownloadUrl(getPlatform());
     const response = await axios({ url, method: 'GET', responseType: 'stream' });
     const writer = fs.createWriteStream(ytDlpPath);
     response.data.pipe(writer);
@@ -59,92 +62,41 @@ async function setupYtDlp() {
       writer.on('finish', resolve);
       writer.on('error', reject);
     });
-    if (platform !== 'win') fs.chmodSync(ytDlpPath, 0o755);
+    if (process.platform !== 'win32') fs.chmodSync(ytDlpPath, 0o755);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
-}
-
-// === CẬP NHẬT ===
-async function searchVideos(query, maxResults = 5) {
-  const ytDlpPath = getYtDlpPath();
-  if (!fs.existsSync(ytDlpPath)) {
-    const setupSuccess = await setupYtDlp();
-    if (!setupSuccess) throw new Error('Không thể thiết lập yt-dlp');
-  }
-
-  return new Promise((resolve, reject) => {
-    const args = [
-      `ytsearch${maxResults}:${query}`,
-      '--skip-download',
-      '--print', '%id|%title|%channel|%duration_string',
-    ];
-
-    const child = spawn(ytDlpPath, args);
-    let output = '';
-    let errorOutput = '';
-
-    child.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-
-    child.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-
-    child.on('error', (err) => reject(new Error('Lỗi khi chạy yt-dlp: ' + err.message)));
-
-    child.on('close', (code) => {
-      if (!output.trim()) {
-        return reject(new Error('❌ Không tìm thấy bài hát phù hợp.\n' + (errorOutput || '')));
-      }
-
-      const lines = output.trim().split('\n').filter(Boolean);
-      const videos = lines.map(line => {
-        const [id, title, channelTitle, duration] = line.split('|');
-        return { id, title, channelTitle, duration };
-      }).filter(v => v.id && v.title);
-
-      if (videos.length === 0) {
-        return reject(new Error('❌ Không tìm thấy bài hát phù hợp.'));
-      }
-
-      resolve(videos);
-    });
-  });
 }
 
 async function downloadMusic(videoId, outputPath) {
   const ytDlpPath = getYtDlpPath();
   if (!fs.existsSync(ytDlpPath)) {
-    const setupSuccess = await setupYtDlp();
-    if (!setupSuccess) throw new Error('Không thể thiết lập yt-dlp');
+    const success = await setupYtDlp();
+    if (!success) throw new Error('Không thể thiết lập yt-dlp');
   }
 
   return new Promise((resolve, reject) => {
-    const cmd = `"${ytDlpPath}" -x --audio-format mp3 --audio-quality 0 -o "${outputPath}" "https://www.youtube.com/watch?v=${videoId}"`;
-    const child = exec(cmd, (error, stdout, stderr) => {
-      if (error) return reject(new Error(`Tải nhạc thất bại: ${stderr}`));
-      resolve();
-    });
-
-    setTimeout(() => {
+    const args = ['-x', '--audio-format', 'mp3', '--audio-quality', '0', '-o', outputPath, `https://www.youtube.com/watch?v=${videoId}`];
+    const child = spawn(ytDlpPath, args);
+    const timeout = setTimeout(() => {
       child.kill();
       reject(new Error('Tải nhạc quá lâu, đã hủy!'));
     }, 300000);
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (code === 0) resolve();
+      else reject(new Error('Tải nhạc thất bại'));
+    });
   });
 }
 
 function formatDuration(duration) {
-  try {
-    if (!duration) return '00:00';
-    if (duration.match(/^\d+:\d+:\d+$/)) return duration;
-    else if (duration.match(/^\d+:\d+$/)) return `00:${duration}`;
-    return '00:00';
-  } catch {
-    return '00:00';
-  }
+  if (!duration) return '00:00';
+  if (/^\d+:\d+:\d+$/.test(duration)) return duration;
+  if (/^\d+:\d+$/.test(duration)) return `00:${duration}`;
+  return '00:00';
 }
 
 module.exports.run = async function({ api, event, args }) {
@@ -157,14 +109,21 @@ module.exports.run = async function({ api, event, args }) {
   }
 
   try {
-    const videos = await searchVideos(args.join(" "), 5);
-    if (!videos || videos.length === 0) {
-      return api.sendMessage("❌ Không tìm thấy bài hát phù hợp!", event.threadID, event.messageID);
+    const searchResults = await Youtube.GetListByKeyword(args.join(" "), false, 5);
+    const videos = (searchResults.items || []).filter(v => v.type === "video").map(v => ({
+      id: v.id,
+      title: v.title || `Bài hát không tên (ID: ${v.id})`,
+      duration: v.length || '00:00',
+      channelTitle: v.channelTitle || 'Nghệ sĩ không xác định'
+    }));
+
+    if (videos.length === 0) {
+      return api.sendMessage("❌ Không có video nào được tìm thấy!", event.threadID, event.messageID);
     }
 
     const message = {
-      body: `📝Kết Quả Tìm Kiếm:\n────────────────────\n${videos.map((v, i) => 
-        `|› ${i+1}. ${v.title}\n|›👤 ${v.channelTitle}\n|›⏱️${formatDuration(v.duration)}\n────────────────────`
+      body: `📝Kết Quả Tìm Kiếm:\n────────────────────\n${videos.map((v, i) =>
+        `|› ${i + 1}. ${v.title}\n|›👤 ${v.channelTitle}\n|›⏱️ ${formatDuration(v.duration)}\n────────────────────`
       ).join('\n')}📌 Reply số để nghe (chỉ bạn chọn được)`,
       attachment: null
     };
@@ -182,7 +141,7 @@ module.exports.run = async function({ api, event, args }) {
     });
 
   } catch (e) {
-    api.sendMessage(`⚠️ Lỗi khi tìm kiếm: ${e.message}`, event.threadID, event.messageID);
+    api.sendMessage("⚠️ Có lỗi xảy ra khi tìm kiếm bài hát!", event.threadID, event.messageID);
   }
 };
 
@@ -202,23 +161,23 @@ module.exports.handleReply = async function({ api, event, handleReply }) {
   if (handleReply.originalMessageID) api.unsendMessage(handleReply.originalMessageID);
 
   const video = handleReply.videos[selectedIndex];
-  const videoId = video.id;
   const tempFile = path.join(cacheDir, `music_${senderID}_${Date.now()}.mp3`);
 
-  api.sendMessage("[📤] Đang tải bài hát, vui lòng chờ...", threadID, async (err, info) => {
+  api.sendMessage("[📤]  Đang tải bài hát, vui lòng chờ...", threadID, async (err, info) => {
     if (err) return;
     const progressMsgId = info.messageID;
 
     try {
-      await downloadMusic(videoId, tempFile);
+      await downloadMusic(video.id, tempFile);
       api.sendMessage({
-        body: `===>《 MUSIC YOUTUBE 》<===\n────────────────────\n[🎵]→Tên nhạc: ${video.title}\n[⏱️]→Thời lượng:  ${formatDuration(video.duration)}\n[👤]→Tác giả: ${video.channelTitle}\n[🗓️]→Tải lên từ: Youtube\n────────────────────\n[⏰]→Time: ${moment().tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY")}`,
+        body: `===>《 MUSIC YOUTUBE 》<===\n────────────────────\n[🎵]→Tên nhạc: ${video.title}\n[⏱️]→Thời lượng: ${formatDuration(video.duration)}\n[👤]→Tác giả: ${video.channelTitle}\n[🗓️]→Tải lên từ: Youtube\n────────────────────\n[⏰]→Time: ${moment().tz("Asia/Ho_Chi_Minh").format("HH:mm DD/MM/YYYY")}`,
         attachment: fs.createReadStream(tempFile)
       }, threadID, (err) => {
         api.unsendMessage(progressMsgId);
         if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
         if (err) api.sendMessage("⚠️ Lỗi khi gửi file MP3! Vui lòng kiểm tra quyền của bot.", threadID);
       });
+
     } catch (e) {
       api.unsendMessage(progressMsgId);
       if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
