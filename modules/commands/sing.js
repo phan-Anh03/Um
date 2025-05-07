@@ -1,4 +1,3 @@
-const axios = require("axios");
 const ytdl = require("ytdl-core");
 const ffmpeg = require("fluent-ffmpeg");
 const fs = require("fs-extra");
@@ -8,24 +7,41 @@ const ffmpegPath = require("ffmpeg-static");
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-module.exports.config = {
-  name: "ytb",
-  version: "2.0.0",
-  hasPermssion: 0,
-  credits: "ChatGPT",
-  description: "Tìm kiếm và tải nhạc MP3 từ YouTube",
-  commandCategory: "Tìm kiếm",
-  usages: "[từ khóa]",
-  cooldowns: 5,
-};
+module.exports.handleReply = async ({ event, api, handleReply }) => {
+  const { threadID, messageID, body, senderID } = event;
+  const choice = parseInt(body);
 
-module.exports.run = async ({ api, event, args }) => {
-  const query = args.join(" ");
-  const { threadID, messageID } = event;
+  if (isNaN(choice) || choice < 1 || choice > handleReply.results.length)
+    return api.sendMessage("❌ Lựa chọn không hợp lệ!", threadID, messageID);
 
-  if (!query) return api.sendMessage("❌ Vui lòng nhập từ khóa tìm kiếm.", threadID, messageID);
+  const video = handleReply.results[choice - 1];
 
   try {
-    const res = await axios.get(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`);
-    const videoIds = [...res.data.matchAll(/"videoId":"(.*?)"/g)];
-    const titles = [...res.data.matchAll(/"title":{"runs":
+    const info = await ytdl.getInfo(video.url);
+    const title = info.videoDetails.title;
+    const outputPath = path.join(__dirname, `/cache/${Date.now()}.mp3`);
+
+    api.sendMessage(`⏳ Đang tải nhạc: ${title}`, threadID);
+
+    ffmpeg(ytdl(video.url, { quality: "highestaudio" }))
+      .audioBitrate(128)
+      .save(outputPath)
+      .on("end", () => {
+        api.sendMessage(
+          {
+            body: `✅ Tải xong: ${title}\n🕒 ${moment.tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY || HH:mm:ss")}`,
+            attachment: fs.createReadStream(outputPath),
+          },
+          threadID,
+          () => fs.unlinkSync(outputPath)
+        );
+      })
+      .on("error", (err) => {
+        console.error(err);
+        api.sendMessage("❌ Lỗi khi chuyển đổi video thành MP3.", threadID, messageID);
+      });
+  } catch (err) {
+    console.error(err);
+    api.sendMessage("❌ Lỗi khi xử lý video.", threadID, messageID);
+  }
+};
