@@ -93,7 +93,7 @@ async function downloadMusic(videoId, outputPath) {
 }
 
 function formatDuration(duration) {
-  if (!duration) return '00:00';
+  if (!duration) return '05:00';
   if (/^\d+:\d+:\d+$/.test(duration)) return duration;
   if (/^\d+:\d+$/.test(duration)) return `00:${duration}`;
   return '00:00';
