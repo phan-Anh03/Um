@@ -1,29 +1,101 @@
-const fs = require('fs'); const path = require('path'); const { exec } = require('child_process'); const Youtube = require('youtube-search-api'); const moment = require('moment-timezone'); const axios = require('axios');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const fs = require('fs-extra');
+const moment = require('moment-timezone');
 
-module.exports.config = { name: "sing2", version: "2.8.6", hasPermission: 0, credits: "D-Jukie, optimized by Grok", description: "Nghe nhạc YouTube với yt-dlp", commandCategory: "Tiện ích", usages: "[tên bài hát]", cooldowns: 5, usePrefix: true, dependencies: { "youtube-search-api": "", "moment-timezone": "", "axios": "" } };
+async function ytb_download(videoUrl) {
+  const { data } = await axios.get(`https://y2mate.guru/en/youtube-mp3/${encodeURIComponent(videoUrl)}`);
+  const $ = cheerio.load(data);
 
-const cacheDir = path.join(__dirname, 'cache'); if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+  const title = $('div.caption > h1').text().trim();
+  const url = $('a[href*="/file/"]').attr('href');
+  const quality = $('span.bitrate').first().text().trim();
+  const duration = $('div.caption > p').eq(1).text().trim();
+  const thumb = $('div.video-thumbnail > img').attr('src');
 
-function checkCacheDirPermissions() { try { fs.accessSync(cacheDir, fs.constants.W_OK); return true; } catch { return false; } }
+  return { title, url, quality, duration, thumb };
+}
 
-async function setupYtDlp() { const ytDlpPath = getYtDlpPath(); if (fs.existsSync(ytDlpPath)) return true; try { const url = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp'; const response = await axios.get(url, { responseType: 'stream' }); const writer = fs.createWriteStream(ytDlpPath); response.data.pipe(writer); await new Promise((resolve, reject) => { writer.on('finish', resolve); writer.on('error', reject); }); fs.chmodSync(ytDlpPath, 0o755); return true; } catch (e) { return false; } }
+module.exports.config = {
+  name: 'ytb',
+  version: '1.0.0',
+  hasPermssion: 0,
+  credits: 'Converted by ChatGPT',
+  description: 'Tìm kiếm nhạc trên YouTube và tải MP3',
+  commandCategory: 'Tìm kiếm',
+  usages: '[từ khóa]',
+  cooldowns: 5,
+  images: [],
+};
 
-function getYtDlpPath() { return process.platform === 'win32' ? path.join(__dirname, 'yt-dlp.exe') : path.join(__dirname, 'yt-dlp'); }
+module.exports.run = async function ({ api, event, args }) {
+  const query = args.join(" ").trim();
+  const { threadID, messageID } = event;
 
-async function downloadMusic(videoId, outputPath) { const ytDlpPath = getYtDlpPath(); if (!fs.existsSync(ytDlpPath)) await setupYtDlp(); return new Promise((resolve, reject) => { const cmd = ${ytDlpPath} -x --audio-format mp3 -o "${outputPath}" https://www.youtube.com/watch?v=${videoId}; exec(cmd, (error, stdout, stderr) => { if (error) return reject(Download error: ${stderr}); resolve(); }); }); }
+  if (!query) {
+    api.sendMessage("⚠️ Vui lòng nhập từ khóa tìm kiếm", threadID, messageID);
+    return;
+  }
 
-module.exports.run = async ({ api, event, args }) => { if (!args[0]) return api.sendMessage("Vui lòng nhập tên bài hát!", event.threadID, event.messageID); if (!checkCacheDirPermissions()) return api.sendMessage("Không có quyền ghi vào thư mục cache!", event.threadID, event.messageID);
+  try {
+    const { data } = await axios.get(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`);
+    const videoIds = [...data.matchAll(/"videoId":"(.*?)"/g)].map(m => m[1]);
+    const seen = new Set();
+    const uniqueVideoIds = videoIds.filter(id => !seen.has(id) && seen.add(id)).slice(0, 5);
 
-try { const searchResults = await Youtube.GetListByKeyword(args.join(" "), false, 5); const video = searchResults.items.find(v => v.type === "video"); if (!video) return api.sendMessage("Không tìm thấy bài hát!", event.threadID, event.messageID);
+    if (uniqueVideoIds.length === 0) {
+      return api.sendMessage(`❎ Không tìm thấy kết quả cho từ khóa "${query}"`, threadID, messageID);
+    }
 
-const filePath = path.join(cacheDir, `${video.id}.mp3`);
-await downloadMusic(video.id, filePath);
+    const results = uniqueVideoIds.map((id, index) => ({
+      title: `https://www.youtube.com/watch?v=${id}`,
+      url: `https://www.youtube.com/watch?v=${id}`,
+      index: index + 1,
+    }));
 
-api.sendMessage({
-  body: `Đã tải xong: ${video.title}`,
-  attachment: fs.createReadStream(filePath)
-}, event.threadID);
+    const msg = results.map((item, i) => `${i + 1}. https://www.youtube.com/watch?v=${uniqueVideoIds[i]}`).join("\n");
 
-} catch (e) { api.sendMessage(Lỗi: ${e}, event.threadID); } };
+    api.sendMessage(`📝 Danh sách kết quả cho từ khóa: "${query}"\n${msg}\n\n📌 Reply theo STT để tải nhạc MP3`, threadID, (err, info) => {
+      global.client.handleReply.push({
+        name: module.exports.config.name,
+        type: "ytb-choose",
+        author: info.senderID,
+        messageID: info.messageID,
+        results,
+      });
+    });
+  } catch (error) {
+    console.error(error);
+    api.sendMessage(`❎ Đã xảy ra lỗi khi tìm kiếm`, threadID, messageID);
+  }
+};
 
-  
+module.exports.handleReply = async function ({ event, api, handleReply }) {
+  const { threadID: tid, messageID: mid, body } = event;
+  const choose = parseInt(body);
+
+  if (isNaN(choose) || choose < 1 || choose > handleReply.results.length) {
+    return api.sendMessage('⚠️ Vui lòng nhập một số hợp lệ từ danh sách.', tid, mid);
+  }
+
+  const chosen = handleReply.results[choose - 1];
+  api.unsendMessage(handleReply.messageID);
+
+  try {
+    const data = await ytb_download(chosen.url);
+    const audio = (await axios.get(data.url, { responseType: 'arraybuffer' })).data;
+    const path = `${__dirname}/cache/${Date.now()}.mp3`;
+
+    fs.writeFileSync(path, Buffer.from(audio, 'binary'));
+
+    api.sendMessage({
+      body: `[ YOUTUBE ] - MP3\n────────────────────\n[📝] → Tiêu đề: ${data.title}\n[⏳] → Thời lượng: ${data.duration}\n[📶] → Bitrate: ${data.quality}\n────────────────────\n[⏰] → Time: ${moment.tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY || HH:mm:ss")}`,
+      attachment: fs.createReadStream(path)
+    }, tid, () => {
+      setTimeout(() => fs.unlinkSync(path), 2 * 60 * 1000);
+    });
+  } catch (err) {
+    console.error(err);
+    api.sendMessage("❌ Đã xảy ra lỗi khi tải MP3 từ YouTube.", tid, mid);
+  }
+};
