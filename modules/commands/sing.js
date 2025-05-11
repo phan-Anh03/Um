@@ -1,93 +1,114 @@
-module.exports.config = {
-	name: "sing",
-	version: "1.0.7",
-	hasPermssion: 0,
-	credits: "Mirai Team",
-	description: "Phát nhạc thông qua link YouTube hoặc từ khoá tìm kiếm",
-	commandCategory: "media",
-	usages: "[link or content need search]",
-	cooldowns: 10,
-	dependencies: {
-		"ytdl-core": "",
-		"simple-youtube-api": "",
-		"fs-extra": ""
-	},
-	envConfig: {
-		"YOUTUBE_API": "AIzaSyB6pTkV2PM7yLVayhnjDSIM0cE_MbEtuvo"
-	}
+const fs = require('fs-extra');
+const ytdl = require('ytdl-core');
+const Youtube = require('youtube-search-api');
+const convertHMS = (value) => new Date(value * 1000).toISOString().slice(11, 19);
+
+const downloadMusicFromYoutube = async (link, path, itag = 18) => {
+    try {
+        var timestart = Date.now();
+        var data = await ytdl.getInfo(link)
+        var result = {
+            id: data.videoDetails.videoId,
+            title: data.videoDetails.title,
+            dur: Number(data.videoDetails.lengthSeconds),
+            viewCount: data.videoDetails.viewCount,
+            likes: data.videoDetails.likes,
+            author: data.videoDetails.author.name,
+            timestart: timestart,
+            publishDate: data.videoDetails.publishDate
+        }
+        return new Promise((resolve, reject) => {
+            ytdl(link, {
+                filter: format => format.itag == itag
+            }).pipe(fs.createWriteStream(path)).on('finish', () => {
+                resolve({
+                    data: path,
+                    info: result
+                })
+            })
+        })
+    } catch (e) {
+        return console.log(e)
+    }
+}
+
+const handleReply = async ({ api, event, handleReply }) => {
+    try {
+        const moment = require("moment-timezone");
+        const time = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm:ss");
+        const path = `${__dirname}/cache/sing-${event.senderID}.mp3`;
+        const { data, info } = await downloadMusicFromYoutube("https://www.youtube.com/watch?v=" + handleReply.link[event.body - 1], path, 18);
+
+        if(fs.statSync(data).size > 26214400) return api.sendMessage('Không thể gửi file vì dung lượng lớn hơn 25MB.', event.threadID, () => fs.unlinkSync(path), event.messageID);
+        api.unsendMessage(handleReply.messageID);
+        const message = {
+            body: `======「 𝗠𝗨𝗦𝗜𝗖 」======\n\n→ Tiêu đề: ${info.title}\n→ Tên kênh: ${info.author}\n→ Ngày tải lên: ${info.publishDate}\n→ Thời lượng: ${convertHMS(info.dur)}\n→ Lượt xem: ${info.viewCount}\n→ Lượt thích: ${info.likes}\n→ Thời gian xử lí: ${Math.floor((Date.now() - info.timestart) / 1000)} giây\n→ Link tải: https://www.y2meta.com/vi/youtube/${handleReply.link[event.body -1]}\n\n======= ${time} =======`,
+            attachment: fs.createReadStream(data),
+        };
+        return api.sendMessage(message, event.threadID, async() => {
+            fs.unlinkSync(path)
+            //iphone
+            // const { data, info } = await downloadMusicFromYoutube("https://www.youtube.com/watch?v=" + handleReply.link[event.body - 1], path, 18);
+            // if(fs.statSync(data).size > 26214400) return
+            // const message = {
+            //     body: `🎵 Title: ${info.title}\n⏱️ Thời gian: ${convertHMS(info.dur)}\n⏱️Thời gian xử lý: ${Math.floor((Date.now() - info.timestart) / 1000)} giây\n💿====DISME PROJECT====💿`,
+            //     attachment: fs.createReadStream(data),
+            // };
+            // return api.sendMessage(message, event.threadID, async() => fs.unlinkSync(path), event.messageID);
+        }, event.messageID);
+    } catch (error) {
+        console.log(error);
+    }
 };
 
-module.exports.languages = {
-	"vi": {
-		"overSizeAllow": "Không thể gửi file vì dung lượng lớn hơn 25MB.",
-		"returnError": "Đã xảy ra vấn đề khi đang xử lý request, lỗi: %1",
-		"cantProcess": "Không thể xử lý yêu cầu của bạn!",
-		"missingInput": "Phần tìm kiếm không được để trống!",
-		"returnList": "🎼 Có %1 kết quả trùng với từ khoá tìm kiếm của bạn: \n%2\nHãy reply(phản hồi) chọn một trong những tìm kiếm trên"
-	},
-	"en": {
-		"overSizeAllow": "Can't send fine because it's bigger than 25MB.",
-		"returnError": "Have some problem when handling request, error: %1",
-		"cantProcess": "Can't handle your request!",
-		"missingInput": "Search section must not be blank!",
-		"returnList": "🎼 Have %1 results with your imput: \n%2\nPlease reply choose 1 of these result"
-	}
-}
+const run = async function ({ api, event, args }) {
+    const moment = require("moment-timezone");
+    const time = moment.tz("Asia/Ho_Chi_Minh").format("HH:mm:ss");
+    if (!args?.length) return api.sendMessage('Phần tìm kiếm không được để trống!', event.threadID, event.messageID);
 
-module.exports.handleReply = async function({ api, event, handleReply }) {
-	const ytdl = global.nodemodule["ytdl-core"];
-	const { createReadStream, createWriteStream, unlinkSync, statSync } = global.nodemodule["fs-extra"];
-	try {
-		ytdl(handleReply.link[event.body - 1])
-			.pipe(createWriteStream(__dirname + `/cache/${handleReply.link[event.body - 1]}.m4a`))
-			.on("close", () => {
-				if (statSync(__dirname + `/cache/${handleReply.link[event.body - 1]}.m4a`).size > 26214400) return api.sendMessage(getText("overSizeAllow"), event.threadID, () => unlinkSync(__dirname + `/cache/${handleReply.link[event.body - 1]}.m4a`), event.messageID);
-				else return api.sendMessage({attachment: createReadStream(__dirname + `/cache/${handleReply.link[event.body - 1]}.m4a`)}, event.threadID, () => unlinkSync(__dirname + `/cache/${handleReply.link[event.body - 1]}.m4a`), event.messageID)
-			})
-			.on("error", (error) => api.sendMessage(getText("returnError", error), event.threadID, event.messageID));
-	}
-	catch { api.sendMessage(getText("cantProcess"), event.threadID, event.messageID) }
-	return api.unsendMessage(handleReply.messageID);
-}
+    const keywordSearch = args.join(" ");
+    const path = `${__dirname}/cache/sing-${event.senderID}.mp3`;
 
-module.exports.run = async function({ api, event, args, getText }) {
-	const ytdl = global.nodemodule["ytdl-core"];
-	const YouTubeAPI = global.nodemodule["simple-youtube-api"];
-	const { createReadStream, createWriteStream, unlinkSync, statSync } = global.nodemodule["fs-extra"];
-	
-	const youtube = new YouTubeAPI(global.configModule[this.config.name].YOUTUBE_API);
-	
-	if (args.length == 0 || !args) return api.sendMessage(getText("missingInput"), event.threadID, event.messageID);
-	const keywordSearch = args.join(" ");
-	const videoPattern = /^(https?:\/\/)?(www\.)?(m\.)?(youtube\.com|youtu\.?be)\/.+$/gi;
-	const urlValid = videoPattern.test(args[0]);
-	
-	if (urlValid) {
-		try {
-			var id = args[0].split(/(vi\/|v=|\/v\/|youtu\.be\/|\/embed\/)/);
-            (id[2] !== undefined) ? id = id[2].split(/[^0-9a-z_\-]/i)[0] : id = id[0];
-			ytdl(args[0])
-				.pipe(createWriteStream(__dirname + `/cache/${id}.m4a`))
-				.on("close", () => {
-					if (statSync(__dirname + `/cache/${id}.m4a`).size > 26214400) return api.sendMessage(getText("overSizeAllow"), event.threadID, () => unlinkSync(__dirname + `/cache/${id}.m4a`), event.messageID);
-					else return api.sendMessage({attachment: createReadStream(__dirname + `/cache/${id}.m4a`)}, event.threadID, () => unlinkSync(__dirname + `/cache/${id}.m4a`) , event.messageID)
-				})
-				.on("error", (error) => api.sendMessage(getText("returnError", error), event.threadID, event.messageID));
-		}
-		catch { return api.sendMessage(getText("cantProcess"), event.threadID, event.messageID) }
-	}
-	else {
-		try {
-			var link = [], msg = "", num = 1;
-			let results = await youtube.searchVideos(keywordSearch, 5);
-			for (const value of results) {
-				if (typeof value.id !== 'undefined') {;
-					link.push(value.id);
-					msg += (`${num++}. ${value.title}\n`);
-				}
-			}
-			return api.sendMessage(getText("returnList", link.length, msg), event.threadID,(error, info) => global.client.handleReply.push({ name: this.config.name, messageID: info.messageID, author: event.senderID, link }), event.messageID);
-		}
-		catch (error) { return api.sendMessage(getText("returnError", JSON.stringify(error)), event.threadID, event.messageID) }
-	}
-}
+    if (args[0]?.startsWith("https://")) {
+        try {
+            const { data, info } = await downloadMusicFromYoutube(args[0], path);
+            const body = `======「 𝗠𝗨𝗦𝗜𝗖 」======\n\n→ Tiêu đề: ${info.title}\n→ Tên kênh: ${info.author}\n→ Ngày tải lên: ${info.publishDate}\n→ Thời lượng: ${convertHMS(info.dur)}\n→ Lượt xem: ${info.viewCount}\n→ Lượt thích: ${info.likes}\n→ Thời gian xử lí: ${Math.floor((Date.now() - info.timestart) / 1000)} giây\n→ Link tải: https://www.y2meta.com/vi/youtube/${handleReply.link[event.body -1]}\n\n======= ${time} =======`;
+
+            if (fs.statSync(data).size > 26214400) { return api.sendMessage('Không thể gửi file vì dung lượng lớn hơn 25MB.', event.threadID, () => fs.unlinkSync(data), event.messageID); }
+
+            return api.sendMessage({ body, attachment: fs.createReadStream(data) }, event.threadID, () => fs.unlinkSync(data), event.messageID);
+        } catch (e) {
+            return console.log(e);
+        }
+    } else {
+        try {
+            const data = (await Youtube.GetListByKeyword(keywordSearch, false, 7))?.items ?? [];
+            console.log(data)
+            const link = data.map(value => value?.id);
+            const body = `Có ${link.length} kết quả trùng với từ khoá tìm kiếm của bạn:\n\n${data.map((value, index) => `${index + 1} - ${value?.title}\n👑 Tên kênh: ${value?.channelTitle}\n⏰ Thời lượng: ${value?.length?.simpleText}\n📎 Link video: https://youtu.be/${value?.id}\n\n`).join('')}→ Hãy reply (phản hồi) chọn một trong những tìm kiếm trên`;
+
+            return api.sendMessage(body, event.threadID, (error, info) => global.client.handleReply.push({
+                type: 'reply',
+                name: config.name,
+                messageID: info.messageID,
+                author: event.senderID,
+                link
+            }), event.messageID);
+        } catch (e) {
+            return api.sendMessage(`Đã xảy ra lỗi, vui lòng thử lại trong giây lát!!\n${e}`, event.threadID, event.messageID);
+        }
+    }
+};
+
+const config = {
+    name: "sing",
+    version: "1.0.0",
+    hasPermssion: 0,
+    credits: "D-Jukie",// Mod by Q.Huy
+    description: "Phát nhạc thông qua link YouTube hoặc từ khoá tìm kiếm",
+    commandCategory: "Tiện ích",
+    usages: "[searchMusic]",
+    cooldowns: 0
+};
+
+module.exports = { config, run, handleReply };
