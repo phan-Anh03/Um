@@ -1,100 +1,86 @@
-const { extractVideoMeta, extractUserInfo, extractSearchResult, extractTrending, extractUserPosts } = require('../scraper/tiktok');
+const { extractSearchResult, extractTrending, extractUserPosts } = require('./tiktok');
+const bot = require('./messenger');
 
-module.exports = async (command, args, reply) => {
-  const url = args[0];
-
-  switch (command) {
-    case 'video':
-      return await handleDownloadVideo(url, reply);
-    case 'audio':
-      return await handleDownloadAudio(url, reply);
-    case 'user':
-      return await handleUserInfo(url, reply);
-    case 'search':
-      return await handleSearch(args.slice(0).join(' '), reply);
-    case 'trending':
-      return await handleTrending(reply);
-    case 'posts':
-      return await handleUserPosts(url, reply);
-    default:
-      return reply('Lệnh không hợp lệ. Các lệnh hợp lệ: video, audio, user, search, trending, posts.');
-  }
-};
-
-async function handleDownloadVideo(url, reply) {
-  try {
-    const videoData = await extractVideoMeta(url);
-    if (!videoData || !videoData.video?.url) {
-      return reply('Không thể lấy dữ liệu video.');
-    }
-    return reply(videoData.video.url);
-  } catch (error) {
-    console.error(error);
-    return reply('Đã xảy ra lỗi khi tải video.');
-  }
-}
-
-async function handleDownloadAudio(url, reply) {
-  try {
-    const videoData = await extractVideoMeta(url);
-    if (!videoData || !videoData.music?.url) {
-      return reply('Không thể lấy dữ liệu âm thanh.');
-    }
-    return reply(videoData.music.url);
-  } catch (error) {
-    console.error(error);
-    return reply('Đã xảy ra lỗi khi tải âm thanh.');
-  }
-}
-
-async function handleUserInfo(username, reply) {
-  try {
-    const userInfo = await extractUserInfo(username);
-    if (!userInfo) {
-      return reply('Không thể lấy thông tin người dùng.');
-    }
-    return reply(JSON.stringify(userInfo, null, 2));
-  } catch (error) {
-    console.error(error);
-    return reply('Đã xảy ra lỗi khi lấy thông tin người dùng.');
-  }
-}
-
-async function handleSearch(query, reply) {
+// Xử lý lệnh tìm kiếm TikTok
+async function handleSearch(query, send) {
   try {
     const results = await extractSearchResult(query);
-    if (!results || results.length === 0) {
-      return reply('Không tìm thấy kết quả.');
-    }
-    return reply(JSON.stringify(results, null, 2));
-  } catch (error) {
-    console.error(error);
-    return reply('Đã xảy ra lỗi khi tìm kiếm.');
+    if (!results || results.length === 0) return send('Không tìm thấy video nào.');
+
+    let message = `Kết quả cho "${query}":\n\n`;
+    results.slice(0, 5).forEach((item, i) => {
+      message += `#${i + 1}\n`;
+      message += `User: @${item.author.uniqueId}\n`;
+      message += `Caption: ${item.desc || 'Không có mô tả'}\n`;
+      message += `Link: https://www.tiktok.com/@${item.author.uniqueId}/video/${item.id}\n\n`;
+    });
+    send(message);
+  } catch (err) {
+    console.error(err);
+    send('Đã xảy ra lỗi khi tìm kiếm.');
   }
 }
 
-async function handleTrending(reply) {
+// Xử lý lệnh trending
+async function handleTrending(send) {
   try {
     const trending = await extractTrending();
-    if (!trending || trending.length === 0) {
-      return reply('Không tìm thấy video thịnh hành.');
-    }
-    return reply(JSON.stringify(trending, null, 2));
-  } catch (error) {
-    console.error(error);
-    return reply('Đã xảy ra lỗi khi lấy video thịnh hành.');
+    if (!trending || trending.length === 0) return send('Không tìm thấy video trending.');
+
+    let message = `Top video trending:\n\n`;
+    trending.slice(0, 5).forEach((item, i) => {
+      message += `#${i + 1}\n`;
+      message += `User: @${item.author.uniqueId}\n`;
+      message += `Caption: ${item.desc || 'Không có mô tả'}\n`;
+      message += `Link: https://www.tiktok.com/@${item.author.uniqueId}/video/${item.id}\n\n`;
+    });
+    send(message);
+  } catch (err) {
+    console.error(err);
+    send('Đã xảy ra lỗi khi tải trending.');
   }
 }
 
-async function handleUserPosts(username, reply) {
+// Xử lý lệnh lấy bài đăng người dùng
+async function handleUserPosts(username, send) {
   try {
     const posts = await extractUserPosts(username);
-    if (!posts || posts.length === 0) {
-      return reply('Không tìm thấy bài đăng của người dùng.');
-    }
-    return reply(JSON.stringify(posts, null, 2));
-  } catch (error) {
-    console.error(error);
-    return reply('Đã xảy ra lỗi khi lấy bài đăng.');
+    if (!posts || posts.length === 0) return send(`Không tìm thấy bài đăng từ @${username}`);
+
+    let message = `Bài đăng từ @${username}:\n\n`;
+    posts.slice(0, 5).forEach((item, i) => {
+      message += `#${i + 1}\n`;
+      message += `Caption: ${item.desc || 'Không có mô tả'}\n`;
+      message += `Link: https://www.tiktok.com/@${username}/video/${item.id}\n\n`;
+    });
+    send(message);
+  } catch (err) {
+    console.error(err);
+    send('Đã xảy ra lỗi khi lấy bài đăng.');
   }
 }
+
+// Lắng nghe tin nhắn
+bot.on('message', async (msg) => {
+  const text = msg.body.trim();
+
+  if (text.startsWith('ttsearch ')) {
+    const query = text.slice(9);
+    return handleSearch(query, (reply) => bot.sendMessage(msg.from, { body: reply }));
+  }
+
+  if (text === 'tttrending') {
+    return handleTrending((reply) => bot.sendMessage(msg.from, { body: reply }));
+  }
+
+  if (text.startsWith('ttposts ')) {
+    const username = text.slice(8);
+    return handleUserPosts(username, (reply) => bot.sendMessage(msg.from, { body: reply }));
+  }
+
+  // Lệnh trợ giúp
+  if (text === 'tthelp') {
+    const help = `Các lệnh TikTok hỗ trợ:\n- ttsearch từ khóa\n- tttrending\n- ttposts username\nVí dụ: ttsearch con mèo`;
+    return bot.sendMessage(msg.from, { body: help });
+  }
+});
