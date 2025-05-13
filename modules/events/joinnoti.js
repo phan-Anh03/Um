@@ -39,7 +39,7 @@ module.exports.run = async function({ api, event, Users  , Threads}) {
 		const fs = require("fs");
     var mlg="Kết nối thành công\nĐã load toàn bộ lệnh và người dùng trong nhóm.\n❌ Nếu nhóm của bạn chưa kích hoạt sử dụng bot, vui lòng sử dụng lệnh 'callad' để liên hệ Admin.\n─────────────────\n🌐 Facebook: https://www.facebook.com/SpeedTunnel/"
     	return api.sendMessage(threadID,async () => {
-await api.shareContact(`${mlg}`, 100018277053087, threadID);
+await api.shareContact(`${mlg}`, 61568443432899, threadID);
 });
 
 	}
