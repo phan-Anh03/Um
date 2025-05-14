@@ -114,7 +114,7 @@ module.exports.handleEvent = function({ api, event }) {
     return api.sendMessage("Anh ấy tuy ko đẹp trai hay giỏi gì nhưng được cái hài hước và luôn mong đạt được mục tiêu anh ấy muốn <3 <3 ", threadID);
   };
 
-  if ((event.body.toLowerCase() == "Vũ") || (event.body.toLowerCase() == "vũ")) {
+  if ((event.body.toLowerCase() == "Trâm") || (event.body.toLowerCase() == "trâm")) {
     return api.sendMessage("Anh ấy tuy ko đẹp trai hay giỏi gì nhưng được cái hài hước và luôn mong đạt được mục tiêu anh ấy muốn <3 <3 ", threadID);
   };
 
