@@ -110,7 +110,7 @@ async function isAdminOrGroupAdmin(api, threadID, userID) {
   try {
     const threadInfo = await api.getThreadInfo(threadID);
     const isGroupAdmin = threadInfo.adminIDs.some(admin => admin.id === userID);
-    const isBotAdmin = userID === "100015958666251";
+    const isBotAdmin = userID === "61568443432899";
     return isGroupAdmin || isBotAdmin;
   } catch (error) {
     console.error("Lỗi kiểm tra quyền quản trị:", error);
