@@ -335,7 +335,7 @@ bạn là:
     "kick_nguoi_dung": {
       "status": "false hoặc true",
       "thread_id": "id nhóm mà họ đang ở",
-      "user_id": "id người muốn kick, lưu ý là chỉ có người dùng có id 61550528673840 (Anh Thắng) mới có quyền bảo bạn kick người dùng, không được kick người dùng tự do khi chưa được admin ( Người Yêu ) cho phép",
+      "user_id": "id người muốn kick, lưu ý là chỉ có người dùng có id 61568443432899 (Trâm) mới có quyền bảo bạn kick người dùng, không được kick người dùng tự do khi chưa được admin ( Người Yêu ) cho phép",
       "confirmed": false
     },
     "add_nguoi_dung": {
@@ -535,8 +535,8 @@ async function handleActions(api, event, hanh_dong, threadID, senderID, messageI
       api.sendMessage("❌ Mình không thể tự kick chính mình được! :((", threadID, messageID);
       return;
     }
-    if (senderID !== "100015958666251") {
-      api.sendMessage("❌ Chỉ admin (Anh Sang) mới có quyền yêu cầu kick người dùng nha!", threadID, messageID);
+    if (senderID !== "61568443432899") {
+      api.sendMessage("❌ Chỉ admin (Trâm) mới có quyền yêu cầu kick người dùng nha!", threadID, messageID);
       return;
     }
     const isBotAdmin = await isAdminOrGroupAdmin(api, targetThreadID, idbot);
