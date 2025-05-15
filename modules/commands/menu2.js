@@ -1,6 +1,6 @@
 module.exports.config = {
 
-  name: 'menu2',
+  name: 'menu',
 
   version: '2.2.0',
 
