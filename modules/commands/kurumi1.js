@@ -62,7 +62,7 @@ module.exports.config = {
   credits: "Trâm Anh",
   description: "Trò chuyện cùng Yuz chat cực thông minh (có thể ngu) và phân tích attachments khi reply bot",
   commandCategory: "Tiện Ích",
-  usages: " yuz [on/off/clear/clearall/clearuser UID/@tag/usage] hoặc reply bot để trò chuyện/phân tích hoặc gọi 'yuz'",
+  usages: "yuz [on/off/clear/clearall/clearuser UID/@tag/usage] hoặc reply bot để trò chuyện/phân tích hoặc gọi 'yuz'",
   cooldowns: 3,
   usePrefix: false
 };
