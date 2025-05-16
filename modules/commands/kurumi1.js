@@ -56,13 +56,13 @@ async function initializeFiles() {
 })();
 
 module.exports.config = {
-  name: "Yuz",
+  name: "yuz",
   version: "2.2.4",
   hasPermssion: 3,
   credits: "Trâm Anh",
   description: "Trò chuyện cùng Yuz chat cực thông minh (có thể ngu) và phân tích attachments khi reply bot",
   commandCategory: "Tiện Ích",
-  usages: "Yuz [on/off/clear/clearall/clearuser UID/@tag/usage] hoặc reply bot để trò chuyện/phân tích hoặc gọi 'Yuz'",
+  usages: " yuz [on/off/clear/clearall/clearuser UID/@tag/usage] hoặc reply bot để trò chuyện/phân tích hoặc gọi 'yuz'",
   cooldowns: 3,
   usePrefix: false
 };
@@ -180,7 +180,7 @@ module.exports.run = async function({ api, event, args }) {
       } else if (isClearAll) {
         historyData = {};
         memoryData = {};
-        api.sendMessage("✅ Đã xóa toàn bộ lịch sử và bộ nhớ của Uta!", threadID, messageID);
+        api.sendMessage("✅ Đã xóa toàn bộ lịch sử và bộ nhớ của Yuz!", threadID, messageID);
         await logUsage("Xóa toàn bộ lịch sử", threadID, senderID);
       }
       await fsPromises.writeFile(historyFile, JSON.stringify(historyData, null, 2));
@@ -261,7 +261,7 @@ module.exports.run = async function({ api, event, args }) {
   }
 
   if (!args[0]) {
-    const suggestions = `- Quản lý: Yuz [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'Yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
+    const suggestions = `- Quản lý: yuz [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
     api.sendMessage(suggestions, threadID, messageID);
     await logUsage("Xem gợi ý", threadID, senderID);
     return;
@@ -384,7 +384,7 @@ module.exports.handleEvent = async function({ api, event }) {
   const memory = await getMemory(threadID);
   const isReplyToBot = event.type === "message_reply" && event.messageReply?.senderID === idbot;
   const isMultimedia = isReplyToBot && event.attachments?.length > 0 && ["photo", "video", "audio"].includes(event.attachments[0].type);
-  const isMentionedUta = event.body && event.body.toLowerCase().includes("uta");
+  const isMentionedUta = event.body && event.body.toLowerCase().includes("yuz");
 
   if (isReplyToBot || isMentionedUta) {
     if (isMultimedia) {
