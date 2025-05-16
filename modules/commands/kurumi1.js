@@ -244,7 +244,7 @@ module.exports.run = async function({ api, event, args }) {
       const usageData = JSON.parse(await fsPromises.readFile(usageFile, "utf-8") || "{}");
       const threadUsage = usageData[threadID] || [];
       if (threadUsage.length === 0) {
-        api.sendMessage("Chưa có lịch sử của Uta trong nhóm này! :3", threadID, messageID);
+        api.sendMessage("Chưa có lịch sử của Yuz trong nhóm này! :3", threadID, messageID);
         return;
       }
       const recentUsage = threadUsage.slice(-10).reverse();
@@ -261,7 +261,7 @@ module.exports.run = async function({ api, event, args }) {
   }
 
   if (!args[0]) {
-    const suggestions = `- Quản lý: goibot [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'Yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
+    const suggestions = `- Quản lý: goibot [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
     api.sendMessage(suggestions, threadID, messageID);
     await logUsage("Xem gợi ý", threadID, senderID);
     return;
