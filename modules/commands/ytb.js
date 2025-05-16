@@ -6,7 +6,7 @@ const moment = require("moment-timezone");
 
 this.config = {
 
-    name: "sing",
+    name: "ytb",
 
     aliases: ["music"],
 
