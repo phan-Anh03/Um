@@ -56,13 +56,13 @@ async function initializeFiles() {
 })();
 
 module.exports.config = {
-  name: "goibot",
+  name: "Yuz",
   version: "2.2.4",
   hasPermssion: 3,
-  credits: "DC-Nam, Duy Toàn, Hùng, Duy Anh mod by TKDEV",
-  description: "Trò chuyện cùng Gemini chat cực thông minh (có thể ngu) và phân tích attachments khi reply bot",
+  credits: "Trâm Anh",
+  description: "Trò chuyện cùng Yuz chat cực thông minh (có thể ngu) và phân tích attachments khi reply bot",
   commandCategory: "Tiện Ích",
-  usages: "goibot [on/off/clear/clearall/clearuser UID/@tag/usage] hoặc reply bot để trò chuyện/phân tích hoặc gọi 'uta'",
+  usages: "Yuz [on/off/clear/clearall/clearuser UID/@tag/usage] hoặc reply bot để trò chuyện/phân tích hoặc gọi 'Yuz'",
   cooldowns: 3,
   usePrefix: false
 };
@@ -152,7 +152,7 @@ module.exports.run = async function({ api, event, args }) {
       data[threadID] = isTurningOn;
       await fsPromises.writeFile(dataFile, JSON.stringify(data, null, 2));
       console.log(`Cập nhật trạng thái bot thành ${isTurningOn ? "bật" : "tắt"} cho ThreadID: ${threadID}`);
-      api.sendMessage(isTurningOn ? "✅ Đã bật goibot ở nhóm này." : "☑ Đã tắt goibot ở nhóm này.", threadID, (err) => {
+      api.sendMessage(isTurningOn ? "✅ Đã bật Yuz ở nhóm này." : "☑ Đã tắt Yuz ở nhóm này.", threadID, (err) => {
         if (err) {
           console.error(`Lỗi khi gửi tin nhắn phản hồi bật/tắt bot:`, err);
         } else {
@@ -194,7 +194,7 @@ module.exports.run = async function({ api, event, args }) {
 
   if (isClearUser) {
     if (!args[1] && !event.mentions) {
-      api.sendMessage("❌ Cung cấp UID/@tag! Ví dụ: goibot clearuser 123456", threadID, messageID);
+      api.sendMessage("❌ Cung cấp UID/@tag! Ví dụ: Yuz clearuser 123456", threadID, messageID);
       return;
     }
     let targetUID;
@@ -261,7 +261,7 @@ module.exports.run = async function({ api, event, args }) {
   }
 
   if (!args[0]) {
-    const suggestions = `- Quản lý: goibot [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
+    const suggestions = `- Quản lý: Yuz [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'Yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
     api.sendMessage(suggestions, threadID, messageID);
     await logUsage("Xem gợi ý", threadID, senderID);
     return;
