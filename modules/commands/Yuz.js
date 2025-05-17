@@ -261,7 +261,7 @@ module.exports.run = async function({ api, event, args }) {
   }
 
   if (!args[0]) {
-    const suggestions = `- Quản lý: yuz [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'yuz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
+    const suggestions = `- Quản lý: yuz [on/off/clear/clearall/clearuser UID/@tag/usage]\n💡 Gọi 'yuzz' hoặc reply tin nhắn của mình để trò chuyện hoặc gửi ảnh/video/âm thanh nha!`;
     api.sendMessage(suggestions, threadID, messageID);
     await logUsage("Xem gợi ý", threadID, senderID);
     return;
