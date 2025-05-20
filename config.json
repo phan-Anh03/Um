@@ -15,8 +15,8 @@
     "autoClean": true,
     "ACCESSTOKEN": "",
     "BOTNAME": "Yuz",
-    "AMDIN_NAME": "Trâm Anh",
-    "FACEBOOK_ADMIN": "https://www.facebook.com/SpeedTunnel/",
+    "AMDIN_NAME": "Tuấn anh",
+    "FACEBOOK_ADMIN": "",
     "PREFIX": ".",
     "LOGIN": {
         "EMAIL": "",
@@ -24,10 +24,10 @@
         "OTPKEY": ""
     },
     "ADMINBOT": [
-        "61568443432899"
+        "100090182412881"
     ],
     "NDH": [
-        "61568443432899"
+        "100090182412881"
     ],
     "DATABASE": {
         "sqlite": {
