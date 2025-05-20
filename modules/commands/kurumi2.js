@@ -134,7 +134,7 @@ module.exports.run = async function({ api, event, args }) {
   if (isChangeTopic) {
     const newTopic = args.slice(1).join(" ");
     if (!newTopic) {
-      return api.sendMessage("❌ Vui lòng nhập tên chủ đề mới! Ví dụ: goibot topic Thảo luận dự án", threadID, event.messageID);
+      return api.sendMessage("❌ Vui lòng nhập tên chủ đề mới! Ví dụ: kurumi topic Thảo luận dự án", threadID, event.messageID);
     }
     const isAdmin = await isAdminOrGroupAdmin(api, threadID, senderID);
     if (!isAdmin) {
